@@ -77,6 +77,9 @@ if "q" not in st.session_state:
     st.session_state.q = 0
 if "score" not in st.session_state:
     st.session_state.score = 0
+# flag: to avoid saving same result multiple times
+if "saved_score" not in st.session_state:
+    st.session_state.saved_score = False
 
 
 # --------------------------
@@ -100,6 +103,7 @@ if st.session_state.page == "home":
             st.session_state.page = "quiz"
             st.session_state.q = 0
             st.session_state.score = 0
+            st.session_state.saved_score = False
             st.rerun()
 
 
@@ -149,86 +153,17 @@ elif st.session_state.page == "result":
     else:
         st.warning("Looks like you came mainly for the food 😆")
 
-    # Save to leaderboard
+    # Read existing scores
     df = pd.read_csv(FILE)
-    df.loc[len(df)] = [st.session_state.name, st.session_state.team, score]
-    df.to_csv(FILE, index=False)
+
+    # Save this run ONLY once (avoid duplicate rows on rerun)
+    if not st.session_state.saved_score:
+        df.loc[len(df)] = [st.session_state.name, st.session_state.team, score]
+        df.to_csv(FILE, index=False)
+        st.session_state.saved_score = True
+
+    # Refresh df after possible write
+    df = pd.read_csv(FILE)
 
     st.write("---")
-    st.subheader("🏆 Leaderboard (Top Players)")
-
-    # sort by score, reset index, then make index start at 1
-    df_sorted = df.sort_values("score", ascending=False).reset_index(drop=True)
-    df_sorted.index = df_sorted.index + 1  # index from 1
-
-    # show 3 at a time (pagination)
-    page_size = 3
-    total_rows = len(df_sorted)
-    total_pages = (total_rows - 1) // page_size + 1 if total_rows > 0 else 1
-
-    page = st.number_input("Page", min_value=1, max_value=total_pages, step=1)
-
-    start = (page - 1) * page_size
-    end = start + page_size
-    st.dataframe(df_sorted.iloc[start:end])
-
-    st.write("---")
-    st.subheader("💥 Who is winning overall?")
-
-    # Team-wise total scores
-    team_scores = df.groupby("team")["score"].sum()
-
-    all_teams = ["Bride Side 💖", "Groom Side 💙", "Know Both Very Well 🤝"]
-    team_scores = team_scores.reindex(all_teams, fill_value=0)
-
-    # ----------------------------
-    # CROWN LEADER PANEL 👑
-    # ----------------------------
-    scores = {
-        "Bride Side 💖": team_scores["Bride Side 💖"],
-        "Groom Side 💙": team_scores["Groom Side 💙"],
-        "Know Both Very Well 🤝": team_scores["Know Both Very Well 🤝"]
-    }
-
-    max_score = max(scores.values())
-
-    col1, col2, col3 = st.columns(3)
-    cols = [col1, col2, col3]
-
-    for (label, value), col in zip(scores.items(), cols):
-        with col:
-
-            is_winner = value == max_score
-
-            # Title with crown
-            if is_winner:
-                st.markdown(f"### 👑 {label}")
-            else:
-                st.markdown(f"### {label}")
-
-            # Big score
-            st.markdown(
-                f"<div style='text-align:center; font-size:50px; font-weight:bold;'>{value}</div>",
-                unsafe_allow_html=True
-            )
-
-            # Message
-            if is_winner:
-                st.markdown(
-                    "<div style='text-align:center; color:gold;'>✨ Currently Leading! ✨</div>",
-                    unsafe_allow_html=True
-                )
-            else:
-                st.markdown(
-                    "<div style='text-align:center;'>🎉 Keep cheering! 🎉</div>",
-                    unsafe_allow_html=True
-                )
-
-            st.markdown("---")
-
-    st.write("---")
-    if st.button("Play Again 🔁"):
-        st.session_state.page = "home"
-        st.session_state.q = 0
-        st.session_state.score = 0
-        st.rerun()
+    st.subheader("🏆 Leaderboard (Top 3 Players)")
