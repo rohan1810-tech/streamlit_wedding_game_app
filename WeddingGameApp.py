@@ -41,8 +41,8 @@ QUESTIONS = [
     ("Which song feels like 'their' song? 🎵",
      ["Perfect – Ed Sheeran 🎻", "Tum Hi Ho 🎹", "Raanjhanaa 🎺", "Kesariya 🧡"],
      "Kesariya 🧡"),
-    ("Who is the bigger foodie? 🍕",
-     ["Bride 🍰", "Groom 🍗", "Both total foodies 🤤", "None, they diet 🙃"],
+    ("Who is the bigger foodie? 🍕", 
+     ["Bride 🍰", "Groom 😋", "Both total foodies 🤤", "None, they diet 🙃"],
      "Both total foodies 🤤"),
     ("Bride’s top complaint about Groom? 😏",
      ["On phone all the time 📱", "Always late 🕒", "Doesn’t reply fast 💬", "Doesn’t plan surprises 🎁"],
@@ -130,7 +130,7 @@ elif st.session_state.page == "quiz":
 
 
 # --------------------------
-# RESULT + VISUAL LEADERBOARD
+# RESULT + CROWN LEADER PANEL
 # --------------------------
 elif st.session_state.page == "result":
     score = st.session_state.score
@@ -163,32 +163,47 @@ elif st.session_state.page == "result":
     st.write("---")
     st.subheader("💥 Who is winning overall?")
 
-    # Team-wise total scores (3 groups)
+    # Team-wise total scores
     team_scores = df.groupby("team")["score"].sum()
 
-    # Ensure all three teams exist in index (fill missing with 0)
     all_teams = ["Bride Side 💖", "Groom Side 💙", "Know Both Very Well 🤝"]
     team_scores = team_scores.reindex(all_teams, fill_value=0)
 
-    # Visual: bar chart
-    st.bar_chart(team_scores)
+    # ----------------------------
+    # CROWN LEADER PANEL 👑
+    # ----------------------------
+    scores = {
+        "Bride Side 💖": team_scores["Bride Side 💖"],
+        "Groom Side 💙": team_scores["Groom Side 💙"],
+        "Know Both Very Well 🤝": team_scores["Know Both Very Well 🤝"]
+    }
 
-    # Visual: metrics
+    max_score = max(scores.values())
+
     col1, col2, col3 = st.columns(3)
-    col1.metric("Bride Side 💖", team_scores["Bride Side 💖"])
-    col2.metric("Groom Side 💙", team_scores["Groom Side 💙"])
-    col3.metric("Know Both 🤝", team_scores["Know Both Very Well 🤝"])
+    cols = [col1, col2, col3]
 
-    # Who is winning?
-    max_score = team_scores.max()
-    if max_score == 0:
-        st.info("No scores yet. Ask more guests to play!")
-    else:
-        winners = [team for team, sc in team_scores.items() if sc == max_score]
-        if len(winners) == 1:
-            st.success(f"🔥 {winners[0]} is currently WINNING with {max_score} points!")
-        else:
-            st.info("It's a TIE between: " + " | ".join(winners))
+    for (label, value), col in zip(scores.items(), cols):
+        with col:
+
+            is_winner = value == max_score
+
+            # Title with crown
+            if is_winner:
+                st.markdown(f"### 👑 {label}")
+            else:
+                st.markdown(f"### {label}")
+
+            # Big score
+            st.markdown(f"<div style='text-align:center; font-size:50px; font-weight:bold;'>{value}</div>", unsafe_allow_html=True)
+
+            # Message
+            if is_winner:
+                st.markdown("<div style='text-align:center; color:gold;'>✨ Currently Leading! ✨</div>", unsafe_allow_html=True)
+            else:
+                st.markdown("<div style='text-align:center;'>🎉 Keep cheering! 🎉</div>", unsafe_allow_html=True)
+
+            st.markdown("---")
 
     st.write("---")
     if st.button("Play Again 🔁"):
