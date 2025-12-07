@@ -157,8 +157,20 @@ elif st.session_state.page == "result":
     st.write("---")
     st.subheader("🏆 Leaderboard (Top Players)")
 
+    # sort by score, reset index, then make index start at 1
     df_sorted = df.sort_values("score", ascending=False).reset_index(drop=True)
-    st.dataframe(df_sorted.head(10))
+    df_sorted.index = df_sorted.index + 1  # index from 1
+
+    # show 3 at a time (pagination)
+    page_size = 3
+    total_rows = len(df_sorted)
+    total_pages = (total_rows - 1) // page_size + 1 if total_rows > 0 else 1
+
+    page = st.number_input("Page", min_value=1, max_value=total_pages, step=1)
+
+    start = (page - 1) * page_size
+    end = start + page_size
+    st.dataframe(df_sorted.iloc[start:end])
 
     st.write("---")
     st.subheader("💥 Who is winning overall?")
@@ -195,13 +207,22 @@ elif st.session_state.page == "result":
                 st.markdown(f"### {label}")
 
             # Big score
-            st.markdown(f"<div style='text-align:center; font-size:50px; font-weight:bold;'>{value}</div>", unsafe_allow_html=True)
+            st.markdown(
+                f"<div style='text-align:center; font-size:50px; font-weight:bold;'>{value}</div>",
+                unsafe_allow_html=True
+            )
 
             # Message
             if is_winner:
-                st.markdown("<div style='text-align:center; color:gold;'>✨ Currently Leading! ✨</div>", unsafe_allow_html=True)
+                st.markdown(
+                    "<div style='text-align:center; color:gold;'>✨ Currently Leading! ✨</div>",
+                    unsafe_allow_html=True
+                )
             else:
-                st.markdown("<div style='text-align:center;'>🎉 Keep cheering! 🎉</div>", unsafe_allow_html=True)
+                st.markdown(
+                    "<div style='text-align:center;'>🎉 Keep cheering! 🎉</div>",
+                    unsafe_allow_html=True
+                )
 
             st.markdown("---")
 
