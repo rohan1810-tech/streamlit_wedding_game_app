@@ -28,7 +28,7 @@ QUESTIONS = [
 TOTAL = len(QUESTIONS)
 
 # --------------------------
-#  Leaderboard Setup
+#  Leaderboard File
 # --------------------------
 FILE = "scores.csv"
 if not os.path.exists(FILE):
@@ -48,7 +48,6 @@ if "q" not in st.session_state:
 if "score" not in st.session_state:
     st.session_state.score = 0
 
-
 # --------------------------
 # HOME SCREEN
 # --------------------------
@@ -65,8 +64,7 @@ if st.session_state.page == "home":
             st.session_state.page = "quiz"
             st.session_state.q = 0
             st.session_state.score = 0
-            st.experimental_rerun()
-
+            st.rerun()
 
 # --------------------------
 # QUIZ SCREEN
@@ -75,7 +73,7 @@ elif st.session_state.page == "quiz":
 
     if st.session_state.q >= TOTAL:
         st.session_state.page = "result"
-        st.experimental_rerun()
+        st.rerun()
 
     question, options, correct = QUESTIONS[st.session_state.q]
 
@@ -89,8 +87,7 @@ elif st.session_state.page == "quiz":
             st.session_state.score += 1
 
         st.session_state.q += 1
-        st.experimental_rerun()
-
+        st.rerun()
 
 # --------------------------
 # RESULT + LEADERBOARD
@@ -101,7 +98,7 @@ elif st.session_state.page == "result":
     score = st.session_state.score
     st.write(f"**Your Score:** {score} / {TOTAL}")
 
-    # Save to leaderboard
+    # Save score
     df = pd.read_csv(FILE)
     df.loc[len(df)] = [st.session_state.name, st.session_state.team, score]
     df.to_csv(FILE, index=False)
@@ -131,4 +128,4 @@ elif st.session_state.page == "result":
         st.session_state.page = "home"
         st.session_state.q = 0
         st.session_state.score = 0
-        st.experimental_rerun()
+        st.rerun()
