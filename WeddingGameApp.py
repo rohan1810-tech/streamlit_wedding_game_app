@@ -134,7 +134,7 @@ elif st.session_state.page == "quiz":
 
 
 # --------------------------
-# RESULT + CROWN LEADER PANEL
+# RESULT + LEADERBOARD + CROWN PANEL
 # --------------------------
 elif st.session_state.page == "result":
     score = st.session_state.score
@@ -153,17 +153,79 @@ elif st.session_state.page == "result":
     else:
         st.warning("Looks like you came mainly for the food 😆")
 
-    # Read existing scores
+    # Load leaderboard file
     df = pd.read_csv(FILE)
 
-    # Save this run ONLY once (avoid duplicate rows on rerun)
+    # Save the player score only once
     if not st.session_state.saved_score:
         df.loc[len(df)] = [st.session_state.name, st.session_state.team, score]
         df.to_csv(FILE, index=False)
         st.session_state.saved_score = True
 
-    # Refresh df after possible write
+    # Reload after write
     df = pd.read_csv(FILE)
 
     st.write("---")
     st.subheader("🏆 Leaderboard (Top 3 Players)")
+
+    # If no players exist yet – show empty table
+    if df.empty:
+        st.info("No players yet. You are the first!")
+        df_top3 = pd.DataFrame(columns=["name", "team", "score"])
+    else:
+        # BEST score per player
+        df_best = df.groupby(["name", "team"], as_index=False)["score"].max()
+
+        # Sort and keep top 3
+        df_top3 = df_best.sort_values("score", ascending=False).head(3).reset_index(drop=True)
+        df_top3.index = df_top3.index + 1  # 1, 2, 3
+
+    st.table(df_top3)
+
+    st.write("---")
+    st.subheader("💥 Who is winning overall?")
+
+    # TEAM SCORES (always works, even with empty CSV)
+    team_scores = df.groupby("team")["score"].sum()
+    all_teams = ["Bride Side 💖", "Groom Side 💙", "Know Both Very Well 🤝"]
+    team_scores = team_scores.reindex(all_teams, fill_value=0)
+
+    # ----------------------------
+    # CROWN LEADER PANEL 👑 (no HTML/CSS)
+    # ----------------------------
+    col1, col2, col3 = st.columns(3)
+
+    scores = {
+        "Bride Side 💖": team_scores["Bride Side 💖"],
+        "Groom Side 💙": team_scores["Groom Side 💙"],
+        "Know Both Very Well 🤝": team_scores["Know Both Very Well 🤝"]
+    }
+
+    max_score_team = max(scores.values())
+
+    for (label, value), col in zip(scores.items(), [col1, col2, col3]):
+        with col:
+            is_winner = (value == max_score_team) and (value > 0)
+
+            # Title
+            if is_winner:
+                col.markdown(f"### 👑 {label}")
+            else:
+                col.markdown(f"### {label}")
+
+            # Use metric as big visual number
+            col.metric("Team Score", value)
+
+            # Message
+            if is_winner:
+                col.write("✨ Currently Leading! ✨")
+            else:
+                col.write("🎉 Keep cheering! 🎉")
+
+    st.write("---")
+    if st.button("Play Again 🔁"):
+        st.session_state.page = "home"
+        st.session_state.q = 0
+        st.session_state.score = 0
+        st.session_state.saved_score = False
+        st.rerun()
