@@ -51,18 +51,24 @@ QUESTIONS = [
      "Maldives")
 ]
 
+TOTAL = len(QUESTIONS)
+
 # ---------------- SCORE FILE ----------------
 FILE = "scores.csv"
 if not os.path.exists(FILE):
     pd.DataFrame(columns=["name", "team", "score"]).to_csv(FILE, index=False)
 
-# ---------------- SESSION STATE ----------------
+# ---------------- SESSION STATE (INITIALIZE EVERYTHING) ----------------
 if "page" not in st.session_state:
     st.session_state.page = "home"
 if "q" not in st.session_state:
     st.session_state.q = 0
 if "score" not in st.session_state:
     st.session_state.score = 0
+if "name" not in st.session_state:
+    st.session_state.name = ""
+if "team" not in st.session_state:
+    st.session_state.team = ""
 
 # =================================================
 # 1️⃣ HOME PAGE
@@ -70,10 +76,12 @@ if "score" not in st.session_state:
 if st.session_state.page == "home":
     st.title("💖 Shaadi Couple Trivia")
 
-    st.session_state.name = st.text_input("Your Name")
+    st.session_state.name = st.text_input("Your Name", st.session_state.name)
     st.session_state.team = st.selectbox(
         "Your Team",
-        ["Bride Side 💖", "Groom Side 💙", "Know Both 🤝"]
+        ["Bride Side 💖", "Groom Side 💙", "Know Both 🤝"],
+        index=0 if st.session_state.team == "" else
+        ["Bride Side 💖", "Groom Side 💙", "Know Both 🤝"].index(st.session_state.team)
     )
 
     if st.button("Start Quiz 🎯"):
@@ -99,7 +107,7 @@ elif st.session_state.page == "quiz":
             st.session_state.score += 1
 
         st.session_state.q += 1
-        if st.session_state.q == len(QUESTIONS):
+        if st.session_state.q == TOTAL:
             st.session_state.page = "leaderboard"
 
         st.rerun()
@@ -126,7 +134,7 @@ else:
     st.subheader("🎯 Your Score")
     st.success(
         f"{st.session_state.name}, you scored "
-        f"{st.session_state.score} / {len(QUESTIONS)}"
+        f"{st.session_state.score} / {TOTAL}"
     )
 
     st.write("---")
