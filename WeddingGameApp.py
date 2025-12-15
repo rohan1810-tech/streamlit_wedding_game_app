@@ -4,9 +4,7 @@ import os
 
 st.set_page_config(page_title="Shaadi Couple Trivia", page_icon="💖", layout="centered")
 
-# --------------------------
-# QUESTIONS
-# --------------------------
+# ---------------- QUESTIONS ----------------
 QUESTIONS = [
     ("Where did they meet? 💌",
      ["College", "Office", "Through friends", "Instagram"],
@@ -21,26 +19,18 @@ QUESTIONS = [
      "Goa")
 ]
 
-TOTAL = len(QUESTIONS)
-
-# --------------------------
-# SCORE FILE
-# --------------------------
+# ---------------- SCORE FILE ----------------
 FILE = "scores.csv"
 if not os.path.exists(FILE):
     pd.DataFrame(columns=["team", "score"]).to_csv(FILE, index=False)
 
-# --------------------------
-# SESSION STATE
-# --------------------------
+# ---------------- SESSION STATE ----------------
 ss = st.session_state
 ss.setdefault("page", "home")
 ss.setdefault("q", 0)
 ss.setdefault("score", 0)
 
-# --------------------------
-# HOME PAGE
-# --------------------------
+# ---------------- HOME ----------------
 if ss.page == "home":
     st.title("💖 Shaadi Couple Trivia")
 
@@ -50,68 +40,49 @@ if ss.page == "home":
         ["Bride Side 💖", "Groom Side 💙", "Know Both 🤝"]
     )
 
-    if st.button("Start Quiz 🎯"):
-        if ss.name.strip() == "":
-            st.warning("Please enter your name")
-        else:
+    if st.button("Start Quiz"):
+        if ss.name.strip():
             ss.q = 0
             ss.score = 0
             ss.page = "quiz"
             st.rerun()
+        else:
+            st.warning("Please enter your name")
 
-# --------------------------
-# QUIZ PAGE
-# --------------------------
+# ---------------- QUIZ ----------------
 elif ss.page == "quiz":
     q, options, correct = QUESTIONS[ss.q]
 
-    st.subheader(f"Q{ss.q + 1}. {q}")
-    answer = st.radio("Choose one", options)
+    answer = st.radio(f"Q{ss.q+1}. {q}", options)
 
-    if st.button("Next ➜"):
-        if answer == correct:
-            ss.score += 1
-
+    if st.button("Next"):
+        ss.score += (answer == correct)
         ss.q += 1
-        if ss.q == TOTAL:
-            ss.page = "leaderboard"
-
+        ss.page = "leaderboard" if ss.q == len(QUESTIONS) else "quiz"
         st.rerun()
 
-# --------------------------
-# LEADERBOARD PAGE
-# --------------------------
+# ---------------- LEADERBOARD ----------------
 else:
     st.title("🏆 Team Leaderboard")
 
-    # Save current score
     df = pd.read_csv(FILE)
-    df.loc[len(df)] = [ss.team, ss.score]
+
+    # SAFE SAVE (NO COLUMN MISMATCH EVER)
+    df = pd.concat(
+        [df, pd.DataFrame([{"team": ss.team, "score": ss.score}])],
+        ignore_index=True
+    )
     df.to_csv(FILE, index=False)
 
-    # Team-wise totals
     team_scores = df.groupby("team")["score"].sum()
 
     st.subheader("💥 Team Scores")
 
-    col1, col2, col3 = st.columns(3)
-    teams = ["Bride Side 💖", "Groom Side 💙", "Know Both 🤝"]
-    cols = [col1, col2, col3]
+    for team in ["Bride Side 💖", "Groom Side 💙", "Know Both 🤝"]:
+        st.metric(team, team_scores.get(team, 0))
 
-    max_score = team_scores.max()
+    st.success(f"👑 Winning Team: {team_scores.idxmax()}")
 
-    for team, col in zip(teams, cols):
-        score = team_scores.get(team, 0)
-        with col:
-            if score == max_score and score > 0:
-                st.markdown(f"### 👑 {team}")
-            else:
-                st.markdown(f"### {team}")
-            st.metric("Score", score)
-
-    st.write("---")
-    st.success(f"🎉 Winning Team: **{team_scores.idxmax()}**")
-
-    if st.button("Play Again 🔁"):
+    if st.button("Play Again"):
         ss.page = "home"
         st.rerun()
