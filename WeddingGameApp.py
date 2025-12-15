@@ -1,8 +1,12 @@
 import streamlit as st
 import pandas as pd
 import os
+import google.generativeai as genai
 
+# ---------------- CONFIG ----------------
 st.set_page_config("Shaadi Couple Trivia", "💖")
+genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
+model = genai.GenerativeModel("gemini-2.5-flash")
 
 QUESTIONS = [
     ("Where did they meet? 💌",
@@ -20,39 +24,41 @@ FILE = "scores.csv"
 if not os.path.exists(FILE):
     pd.DataFrame(columns=["team", "score"]).to_csv(FILE, index=False)
 
+# ---------------- STATE ----------------
 ss = st.session_state
 ss.setdefault("page", "home")
 ss.setdefault("q", 0)
 ss.setdefault("score", 0)
 
-# -------- HOME --------
+# ---------------- HOME ----------------
 if ss.page == "home":
     st.title("💖 Shaadi Couple Trivia")
+
     ss.name = st.text_input("Your Name")
     ss.team = st.selectbox("Your Team",
                            ["Bride Side 💖", "Groom Side 💙", "Know Both 🤝"])
 
     if st.button("Start Quiz"):
-        if ss.name.strip():
-            ss.q, ss.score, ss.page = 0, 0, "quiz"
+        if ss.name:
+            ss.q = 0
+            ss.score = 0
+            ss.page = "quiz"
             st.rerun()
-        else:
-            st.warning("Enter your name")
 
-# -------- QUIZ --------
+# ---------------- QUIZ ----------------
 elif ss.page == "quiz":
-    q, opts, correct = QUESTIONS[ss.q]
-    ans = st.radio(f"Q{ss.q+1}. {q}", opts)
+    q, options, correct = QUESTIONS[ss.q]
+    ans = st.radio(f"Q{ss.q+1}. {q}", options)
 
     if st.button("Next"):
-        ss.score += ans == correct
+        ss.score += (ans == correct)
         ss.q += 1
         ss.page = "leaderboard" if ss.q == len(QUESTIONS) else "quiz"
         st.rerun()
 
-# -------- LEADERBOARD --------
+# ---------------- LEADERBOARD ----------------
 else:
-    st.title("🏆 Group Leaderboard")
+    st.title("🏆 Team Leaderboard")
 
     df = pd.read_csv(FILE)
     df.loc[len(df)] = [ss.team, ss.score]
@@ -64,7 +70,15 @@ else:
     for team in ["Bride Side 💖", "Groom Side 💙", "Know Both 🤝"]:
         st.metric(team, team_scores.get(team, 0))
 
-    st.success(f"👑 Winning Team: {winner}")
+    prompt = f"""
+    Team scores:
+    {team_scores.to_dict()}
+    Winning team: {winner}
+
+    Announce the winner in a fun wedding-friendly way.
+    """
+
+    st.success(model.generate_content(prompt).text)
 
     if st.button("Play Again"):
         ss.page = "home"
