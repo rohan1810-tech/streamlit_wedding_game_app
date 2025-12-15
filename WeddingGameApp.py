@@ -1,107 +1,49 @@
 import streamlit as st
 
-st.set_page_config(page_title="Shaadi Couple Trivia", page_icon="💖", layout="centered")
+st.set_page_config(page_title="Shaadi Couple Trivia", page_icon="💖")
 
-# --------------------------
-# QUESTIONS
-# --------------------------
-QUESTIONS = [
-    ("Where did their love story begin? 💌",
-     ["College canteen 😋", "Office pantry ☕", "Through friends 🧑‍🤝‍🧑", "Instagram DMs 📱"],
-     "Through friends 🧑‍🤝‍🧑"),
+# Questions
+questions = [
+    ("Where did they meet? 💌",
+     ["College", "Office", "Through friends", "Instagram"],
+     "Through friends"),
 
-    ("Who said 'I love you' first? ❤️",
-     ["Bride 👰", "Groom 🤵", "Same time ⏱️", "No one remembers 🤔"],
-     "Groom 🤵"),
+    ("Who said I love you first? ❤️",
+     ["Bride", "Groom", "Both", "No one"],
+     "Groom"),
 
-    ("Their first trip together? ✈️",
-     ["Goa 🏖️", "Manali 🏔️", "Jaipur 🏰", "Lonavala 🌧️"],
-     "Goa 🏖️"),
-
-    ("Who clicks more selfies? 🤳",
-     ["Bride 👰", "Groom 🤵", "Both 😎", "None 🙈"],
-     "Bride 👰"),
-
-    ("Perfect date-night food? 🍽️",
-     ["Pizza 🍕", "Pani Puri 🤤", "Chinese 🍜", "Thali 🍛"],
-     "Pani Puri 🤤")
+    ("First trip together? ✈️",
+     ["Goa", "Manali", "Jaipur", "Lonavala"],
+     "Goa")
 ]
 
-TOTAL = len(QUESTIONS)
+st.title("💖 Shaadi Couple Trivia")
 
-# --------------------------
-# SESSION STATE
-# --------------------------
-if "started" not in st.session_state:
-    st.session_state.started = False
-if "q" not in st.session_state:
-    st.session_state.q = 0
-if "score" not in st.session_state:
-    st.session_state.score = 0
+name = st.text_input("Your Name")
+team = st.selectbox("Your Team", ["Bride Side", "Groom Side", "Know Both"])
 
-# --------------------------
-# HOME SCREEN
-# --------------------------
-if not st.session_state.started:
-    st.title("💖 Shaadi Couple Trivia")
-    st.write("Fun quiz for wedding guests 🎉")
+st.write("----")
 
-    name = st.text_input("Your Name ✍️")
-    team = st.selectbox(
-        "You belong to:",
-        ["Bride Side 💖", "Groom Side 💙", "Know Both 🤝"]
-    )
+# Ask questions (VERY SIMPLE)
+a1 = st.radio("1. Where did they meet?", questions[0][1])
+a2 = st.radio("2. Who said I love you first?", questions[1][1])
+a3 = st.radio("3. First trip together?", questions[2][1])
 
-    if st.button("Start Quiz 🎯"):
-        if name.strip() == "":
-            st.warning("Please enter your name 😊")
-        else:
-            st.session_state.started = True
-            st.session_state.name = name
-            st.session_state.team = team
-            st.session_state.q = 0
-            st.session_state.score = 0
-            st.rerun()
+if st.button("Submit"):
+    score = 0
 
-# --------------------------
-# QUIZ SCREEN
-# --------------------------
-elif st.session_state.q < TOTAL:
-    q_no = st.session_state.q
-    question, options, correct = QUESTIONS[q_no]
+    if a1 == questions[0][2]:
+        score += 1
+    if a2 == questions[1][2]:
+        score += 1
+    if a3 == questions[2][2]:
+        score += 1
 
-    st.subheader(f"Q{q_no + 1}. {question}")
-    answer = st.radio("Choose one 👇", options)
+    st.success(f"{name}, your score is {score}/3")
 
-    if st.button("Next ➜"):
-        if answer == correct:
-            st.session_state.score += 1
-        st.session_state.q += 1
-        st.rerun()
-
-# --------------------------
-# RESULT SCREEN
-# --------------------------
-else:
-    st.title("🎉 Quiz Completed!")
-
-    st.write(f"**Name:** {st.session_state.name}")
-    st.write(f"**Team:** {st.session_state.team}")
-    st.subheader(f"Score: {st.session_state.score} / {TOTAL}")
-
-    score = st.session_state.score
-
-    if score == TOTAL:
-        st.success("LEGEND! You know them perfectly 😎")
-    elif score >= TOTAL * 0.6:
-        st.success("Great job! You know them well 💖")
-    elif score >= TOTAL * 0.3:
-        st.info("Not bad! Enjoy the wedding 🎉")
+    if team == "Bride Side":
+        st.write("💖 Bride Side gains points!")
+    elif team == "Groom Side":
+        st.write("💙 Groom Side gains points!")
     else:
-        st.warning("Looks like you came mainly for the food 😆")
-
-    if st.button("Play Again 🔁"):
-        st.session_state.started = False
-        st.session_state.q = 0
-        st.session_state.score = 0
-        st.rerun()
+        st.write("🤝 You know both well!")
