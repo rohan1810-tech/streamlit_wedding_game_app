@@ -1,49 +1,71 @@
 import streamlit as st
+import pandas as pd
+import os
 
-st.set_page_config(page_title="Shaadi Couple Trivia", page_icon="💖")
+st.set_page_config("Shaadi Couple Trivia", "💖")
 
-# Questions
-questions = [
+QUESTIONS = [
     ("Where did they meet? 💌",
      ["College", "Office", "Through friends", "Instagram"],
      "Through friends"),
-
     ("Who said I love you first? ❤️",
      ["Bride", "Groom", "Both", "No one"],
      "Groom"),
-
     ("First trip together? ✈️",
      ["Goa", "Manali", "Jaipur", "Lonavala"],
      "Goa")
 ]
 
-st.title("💖 Shaadi Couple Trivia")
+FILE = "scores.csv"
+if not os.path.exists(FILE):
+    pd.DataFrame(columns=["team", "score"]).to_csv(FILE, index=False)
 
-name = st.text_input("Your Name")
-team = st.selectbox("Your Team", ["Bride Side", "Groom Side", "Know Both"])
+ss = st.session_state
+ss.setdefault("page", "home")
+ss.setdefault("q", 0)
+ss.setdefault("score", 0)
 
-st.write("----")
+# -------- HOME --------
+if ss.page == "home":
+    st.title("💖 Shaadi Couple Trivia")
+    ss.name = st.text_input("Your Name")
+    ss.team = st.selectbox("Your Team",
+                           ["Bride Side 💖", "Groom Side 💙", "Know Both 🤝"])
 
-# Ask questions (VERY SIMPLE)
-a1 = st.radio("1. Where did they meet?", questions[0][1])
-a2 = st.radio("2. Who said I love you first?", questions[1][1])
-a3 = st.radio("3. First trip together?", questions[2][1])
+    if st.button("Start Quiz"):
+        if ss.name.strip():
+            ss.q, ss.score, ss.page = 0, 0, "quiz"
+            st.rerun()
+        else:
+            st.warning("Enter your name")
 
-if st.button("Submit"):
-    score = 0
+# -------- QUIZ --------
+elif ss.page == "quiz":
+    q, opts, correct = QUESTIONS[ss.q]
+    ans = st.radio(f"Q{ss.q+1}. {q}", opts)
 
-    if a1 == questions[0][2]:
-        score += 1
-    if a2 == questions[1][2]:
-        score += 1
-    if a3 == questions[2][2]:
-        score += 1
+    if st.button("Next"):
+        ss.score += ans == correct
+        ss.q += 1
+        ss.page = "leaderboard" if ss.q == len(QUESTIONS) else "quiz"
+        st.rerun()
 
-    st.success(f"{name}, your score is {score}/3")
+# -------- LEADERBOARD --------
+else:
+    st.title("🏆 Group Leaderboard")
 
-    if team == "Bride Side":
-        st.write("💖 Bride Side gains points!")
-    elif team == "Groom Side":
-        st.write("💙 Groom Side gains points!")
-    else:
-        st.write("🤝 You know both well!")
+    df = pd.read_csv(FILE)
+    df.loc[len(df)] = [ss.team, ss.score]
+    df.to_csv(FILE, index=False)
+
+    team_scores = df.groupby("team")["score"].sum()
+    winner = team_scores.idxmax()
+
+    for team in ["Bride Side 💖", "Groom Side 💙", "Know Both 🤝"]:
+        st.metric(team, team_scores.get(team, 0))
+
+    st.success(f"👑 Winning Team: {winner}")
+
+    if st.button("Play Again"):
+        ss.page = "home"
+        st.rerun()
