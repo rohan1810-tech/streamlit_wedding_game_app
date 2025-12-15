@@ -2,7 +2,11 @@ import streamlit as st
 import pandas as pd
 import os
 
-st.set_page_config(page_title="Shaadi Couple Trivia", page_icon="💖", layout="centered")
+st.set_page_config(
+    page_title="Shaadi Couple Trivia",
+    page_icon="💖",
+    layout="centered"
+)
 
 # ---------------- QUESTIONS ----------------
 QUESTIONS = [
@@ -50,7 +54,7 @@ QUESTIONS = [
 # ---------------- SCORE FILE ----------------
 FILE = "scores.csv"
 if not os.path.exists(FILE):
-    pd.DataFrame(columns=["name", "score"]).to_csv(FILE, index=False)
+    pd.DataFrame(columns=["name", "team", "score"]).to_csv(FILE, index=False)
 
 # ---------------- SESSION STATE ----------------
 if "page" not in st.session_state:
@@ -67,6 +71,10 @@ if st.session_state.page == "home":
     st.title("💖 Shaadi Couple Trivia")
 
     st.session_state.name = st.text_input("Your Name")
+    st.session_state.team = st.selectbox(
+        "Your Team",
+        ["Bride Side 💖", "Groom Side 💙", "Know Both 🤝"]
+    )
 
     if st.button("Start Quiz 🎯"):
         if st.session_state.name.strip() == "":
@@ -97,34 +105,52 @@ elif st.session_state.page == "quiz":
         st.rerun()
 
 # =================================================
-# 3️⃣ LEADERBOARD PAGE (SIMPLIFIED)
+# 3️⃣ LEADERBOARD PAGE
 # =================================================
 else:
     st.title("🏆 Leaderboard")
 
-    # Save score
+    # Save current player score
     df = pd.read_csv(FILE)
     df = pd.concat(
         [df, pd.DataFrame([{
             "name": st.session_state.name,
+            "team": st.session_state.team,
             "score": st.session_state.score
         }])],
         ignore_index=True
     )
     df.to_csv(FILE, index=False)
 
-    # Show person's score
-    st.subheader("🎯 Your Result")
+    # Show personal score
+    st.subheader("🎯 Your Score")
     st.success(
-        f"{st.session_state.name}, you answered "
-        f"{st.session_state.score} out of {len(QUESTIONS)} correctly."
+        f"{st.session_state.name}, you scored "
+        f"{st.session_state.score} / {len(QUESTIONS)}"
     )
 
     st.write("---")
 
-    # Show leaderboard
-    st.subheader("📊 Leaderboard")
-    st.table(df.sort_values("score", ascending=False).reset_index(drop=True))
+    # Team-wise scores
+    st.subheader("💥 Team Scores")
+    team_scores = df.groupby("team")["score"].sum()
+
+    for team in ["Bride Side 💖", "Groom Side 💙", "Know Both 🤝"]:
+        st.metric(team, team_scores.get(team, 0))
+
+    st.success(f"👑 Winning Team: **{team_scores.idxmax()}**")
+
+    st.write("---")
+
+    # Top 3 scorers
+    st.subheader("🏅 Top 3 Scorers")
+    top3 = (
+        df.sort_values("score", ascending=False)
+          .head(3)[["name", "score"]]
+          .reset_index(drop=True)
+    )
+    top3.index = top3.index + 1
+    st.table(top3)
 
     if st.button("Play Again 🔁"):
         st.session_state.page = "home"
