@@ -1,85 +1,117 @@
 import streamlit as st
 import pandas as pd
 import os
-import google.generativeai as genai
 
-# ---------------- CONFIG ----------------
-st.set_page_config("Shaadi Couple Trivia", "💖")
-genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
-model = genai.GenerativeModel("gemini-2.5-flash")
+st.set_page_config(page_title="Shaadi Couple Trivia", page_icon="💖", layout="centered")
 
+# --------------------------
+# QUESTIONS
+# --------------------------
 QUESTIONS = [
     ("Where did they meet? 💌",
      ["College", "Office", "Through friends", "Instagram"],
      "Through friends"),
+
     ("Who said I love you first? ❤️",
      ["Bride", "Groom", "Both", "No one"],
      "Groom"),
+
     ("First trip together? ✈️",
      ["Goa", "Manali", "Jaipur", "Lonavala"],
      "Goa")
 ]
 
+TOTAL = len(QUESTIONS)
+
+# --------------------------
+# SCORE FILE
+# --------------------------
 FILE = "scores.csv"
 if not os.path.exists(FILE):
     pd.DataFrame(columns=["team", "score"]).to_csv(FILE, index=False)
 
-# ---------------- STATE ----------------
+# --------------------------
+# SESSION STATE
+# --------------------------
 ss = st.session_state
 ss.setdefault("page", "home")
 ss.setdefault("q", 0)
 ss.setdefault("score", 0)
 
-# ---------------- HOME ----------------
+# --------------------------
+# HOME PAGE
+# --------------------------
 if ss.page == "home":
     st.title("💖 Shaadi Couple Trivia")
 
     ss.name = st.text_input("Your Name")
-    ss.team = st.selectbox("Your Team",
-                           ["Bride Side 💖", "Groom Side 💙", "Know Both 🤝"])
+    ss.team = st.selectbox(
+        "Your Team",
+        ["Bride Side 💖", "Groom Side 💙", "Know Both 🤝"]
+    )
 
-    if st.button("Start Quiz"):
-        if ss.name:
+    if st.button("Start Quiz 🎯"):
+        if ss.name.strip() == "":
+            st.warning("Please enter your name")
+        else:
             ss.q = 0
             ss.score = 0
             ss.page = "quiz"
             st.rerun()
 
-# ---------------- QUIZ ----------------
+# --------------------------
+# QUIZ PAGE
+# --------------------------
 elif ss.page == "quiz":
     q, options, correct = QUESTIONS[ss.q]
-    ans = st.radio(f"Q{ss.q+1}. {q}", options)
 
-    if st.button("Next"):
-        ss.score += (ans == correct)
+    st.subheader(f"Q{ss.q + 1}. {q}")
+    answer = st.radio("Choose one", options)
+
+    if st.button("Next ➜"):
+        if answer == correct:
+            ss.score += 1
+
         ss.q += 1
-        ss.page = "leaderboard" if ss.q == len(QUESTIONS) else "quiz"
+        if ss.q == TOTAL:
+            ss.page = "leaderboard"
+
         st.rerun()
 
-# ---------------- LEADERBOARD ----------------
+# --------------------------
+# LEADERBOARD PAGE
+# --------------------------
 else:
     st.title("🏆 Team Leaderboard")
 
+    # Save current score
     df = pd.read_csv(FILE)
     df.loc[len(df)] = [ss.team, ss.score]
     df.to_csv(FILE, index=False)
 
+    # Team-wise totals
     team_scores = df.groupby("team")["score"].sum()
-    winner = team_scores.idxmax()
 
-    for team in ["Bride Side 💖", "Groom Side 💙", "Know Both 🤝"]:
-        st.metric(team, team_scores.get(team, 0))
+    st.subheader("💥 Team Scores")
 
-    prompt = f"""
-    Team scores:
-    {team_scores.to_dict()}
-    Winning team: {winner}
+    col1, col2, col3 = st.columns(3)
+    teams = ["Bride Side 💖", "Groom Side 💙", "Know Both 🤝"]
+    cols = [col1, col2, col3]
 
-    Announce the winner in a fun wedding-friendly way.
-    """
+    max_score = team_scores.max()
 
-    st.success(model.generate_content(prompt).text)
+    for team, col in zip(teams, cols):
+        score = team_scores.get(team, 0)
+        with col:
+            if score == max_score and score > 0:
+                st.markdown(f"### 👑 {team}")
+            else:
+                st.markdown(f"### {team}")
+            st.metric("Score", score)
 
-    if st.button("Play Again"):
+    st.write("---")
+    st.success(f"🎉 Winning Team: **{team_scores.idxmax()}**")
+
+    if st.button("Play Again 🔁"):
         ss.page = "home"
         st.rerun()
